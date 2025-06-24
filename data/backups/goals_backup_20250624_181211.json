@@ -1,0 +1,16 @@
+{
+  "default": [
+    {
+      "id": "6c2f875b",
+      "title": "cel1",
+      "description": "opis",
+      "target_value": 1.0,
+      "current_value": 0.0,
+      "goal_type": "Ogólny",
+      "status": "aktywny",
+      "created_date": "2025-06-24T18:11:41.502022",
+      "deadline": "2025-07-07T00:00:00",
+      "history": []
+    }
+  ]
+}

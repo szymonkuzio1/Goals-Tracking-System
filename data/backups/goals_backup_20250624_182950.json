@@ -1,0 +1,16 @@
+{
+  "default": [
+    {
+      "id": "4f83c985",
+      "title": "test1",
+      "description": "opisek",
+      "target_value": 1.0,
+      "current_value": 0.0,
+      "goal_type": "Ogólny",
+      "status": "aktywny",
+      "created_date": "2025-06-24T18:29:05.953866",
+      "deadline": "2025-07-07T00:00:00",
+      "history": []
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "default_user": [
+    {
+      "id": "993e0dc0",
+      "title": "tak",
+      "description": "nie",
+      "target_value": 10.0,
+      "current_value": 2.0,
+      "category": "Osobisty",
+      "status": "aktywny",
+      "created_date": "2025-06-17T12:52:06.415731",
+      "deadline": null,
+      "history": [
+        {
+          "date": 

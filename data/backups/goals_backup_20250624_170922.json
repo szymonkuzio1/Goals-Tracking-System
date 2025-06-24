@@ -1,0 +1,16 @@
+{
+  "default": [
+    {
+      "id": "b9f3be8c",
+      "title": "ests",
+      "description": "test",
+      "target_value": 10.0,
+      "current_value": 0.0,
+      "goal_type": "Ogólny",
+      "status": "aktywny",
+      "created_date": "2025-06-24T15:49:46.666069",
+      "deadline": null,
+      "history": []
+    }
+  ]
+}

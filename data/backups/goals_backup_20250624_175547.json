@@ -1,0 +1,16 @@
+{
+  "default": [
+    {
+      "id": "1f086cf7",
+      "title": "test1",
+      "description": "test opis",
+      "target_value": 1.0,
+      "current_value": 0.0,
+      "goal_type": "Ogólny",
+      "status": "aktywny",
+      "created_date": "2025-06-24T17:50:51.212084",
+      "deadline": "2025-07-07T00:00:00",
+      "history": []
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "default": [
+    {
+      "id": "3f044489",
+      "title": "test",
+      "description": "opis",
+      "target_value": 10.0,
+      "current_value": 5.0,
+      "goal_type": "Osobisty",
+      "status": "aktywny",
+      "created_date": "2025-06-24T17:09:21.161395",
+      "deadline": null,
+      "history": [
+        {
+          "date": 
