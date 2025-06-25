@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, date
 from typing import Dict, List, Any, Optional, Union, Callable
 from functools import reduce
+from .models.goal import Goal, PersonalGoal, BusinessGoal
 import hashlib
 DEFAULT_USER = "default"
 
@@ -289,7 +290,7 @@ class APIManager:
                     # Konwersja i dodanie celu
                     converted_goal = _convert_imported_goal(goal_data)
 
-                    # Tworzenie obiektu celu (uproszczone - w rzeczywistości używaj factory pattern)
+                    # Tworzenie obiektu celu
                     from .models.goal import Goal
                     goal = Goal(
                         converted_goal['title'],

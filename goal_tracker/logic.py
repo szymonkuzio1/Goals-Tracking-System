@@ -11,7 +11,6 @@ from .utils.validators import validate_goal_data, validate_progress_value
 
 # Zmienne globalne konfiguracyjne
 MAX_GOALS = 50
-MIN_PROGRESS_INTERVAL_HOURS = 1
 DEFAULT_ANALYSIS_PERIOD_DAYS = 30
 ACHIEVEMENT_THRESHOLDS = {
     'beginner': 25.0,
@@ -26,15 +25,16 @@ class GoalManager:
     Główna klasa zarządzania celami i postępami
     """
 
-    def __init__(self, data_manager=None):
+    def __init__(self, data_manager=None, max_goals=None):
         self._goals_storage = {}  # prywatny słownik: {user_id: [Goal]}
         self._data_manager = data_manager
+        self._max_goals = max_goals or MAX_GOALS
         self._last_backup_time = None  # czas ostatniej kopii zapasowej
 
     def _validate_user_goal_limit(self, username: str) -> bool:
         """Prywatna metoda sprawdzania limitu celów"""
         user_goals = self._goals_storage.get(username, [])
-        return len(user_goals) < MAX_GOALS
+        return len(user_goals) < self._max_goals
 
     def add_goal(self, username: str, goal: Goal) -> bool:
         """Dodanie nowego celu do systemu"""
@@ -100,14 +100,6 @@ class GoalManager:
                     return goal
             return None
 
-        def _check_progress_interval(goal: Goal) -> bool:
-            """Wewnętrzna funkcja sprawdzania interwału aktualizacji"""
-            if not hasattr(goal, '_last_update') or goal._last_update is None:
-                return True
-
-            time_diff = datetime.now() - goal._last_update
-            return time_diff.total_seconds() / 3600 >= MIN_PROGRESS_INTERVAL_HOURS
-
         try:
             user_goals = self._goals_storage.get(username, [])
             goal = _find_goal_by_id(user_goals, goal_id)
@@ -115,15 +107,11 @@ class GoalManager:
             if not goal:
                 raise ValueError(f"Nie znaleziono celu o ID: {goal_id}")
 
-            # Sprawdzenie interwału aktualizacji
-            if not _check_progress_interval(goal):
-                print(f"⚠️ Możesz aktualizować postęp maksymalnie co {MIN_PROGRESS_INTERVAL_HOURS} godzin(y)")
-                return False
-
             # Walidacja nowej wartości
             is_valid, message = validate_progress_value(new_value, goal.target_value)
             if not is_valid:
-                raise ValueError(message)
+                print(f"❌ Nieprawidłowa wartość postępu: {message}")
+                return False
 
             # Aktualizacja postępu
             old_value = goal.current_value

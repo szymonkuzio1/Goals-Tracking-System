@@ -74,9 +74,8 @@ def validate_progress_value(current_value: Any, target_value: float) -> Tuple[bo
         if progress < 0:
             return False, "Wartość postępu nie może być ujemna"
 
-        # Ostrzeżenie jeśli przekracza cel
-        if progress > target_value * 1.5:  # 150% celu
-            return False, f"Wartość postępu ({progress}) znacznie przekracza cel ({target_value})"
+        if progress > 999999:
+            return False, "Wartość postępu jest za duża (max 999,999)"
 
         return True, "Wartość postępu poprawna"
 

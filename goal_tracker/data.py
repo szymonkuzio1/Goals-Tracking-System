@@ -117,86 +117,88 @@ class DataManager:
             return False
 
     def save_goals_data(self, goals_data: List[Dict[str, Any]], username: str = None) -> bool:
-        """Zapis danych celów do pliku"""
+        """
+        Zapis danych celów z KOMPLETNĄ serializacją datetime
+        """
+
+        def _serialize_any_datetime(obj):
+            """Rekursywna serializacja wszystkich datetime obiektów"""
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            elif isinstance(obj, dict):
+                return {k: _serialize_any_datetime(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [_serialize_any_datetime(item) for item in obj]
+            else:
+                return obj
 
         def _prepare_goals_for_save(goals: List[Dict]) -> List[Dict]:
             """Wewnętrzna funkcja przygotowania danych do zapisu"""
             prepared_goals = []
 
             for goal_dict in goals:
-                # Konwersja dat do ISO format
-                prepared_goal = goal_dict.copy()
+                try:
+                    # Serializacja wszystkich datetime
+                    serialized_goal = _serialize_any_datetime(goal_dict.copy())
+                    test_json = json.dumps(serialized_goal)
 
-                if 'created_date' in prepared_goal and isinstance(prepared_goal['created_date'], datetime):
-                    prepared_goal['created_date'] = prepared_goal['created_date'].isoformat()
+                    # Sprawdzenie wymaganych pól
+                    required_fields = ['id', 'title', 'target_value']
+                    if all(field in serialized_goal for field in required_fields):
+                        prepared_goals.append(serialized_goal)
+                    else:
+                        print(f"⚠️ Pominięto cel z niepełnymi danymi: {serialized_goal.get('title', 'Bez nazwy')}")
 
-                if 'deadline' in prepared_goal and prepared_goal['deadline']:
-                    if isinstance(prepared_goal['deadline'], datetime):
-                        prepared_goal['deadline'] = prepared_goal['deadline'].isoformat()
-
-                # Walidacja wymaganych pól
-                required_fields = ['id', 'title', 'target_value']
-                if all(field in prepared_goal for field in required_fields):
-                    prepared_goals.append(prepared_goal)
-                else:
-                    print(f"⚠️ Pominięto cel z niepełnymi danymi: {prepared_goal.get('title', 'Bez nazwy')}")
+                except (TypeError, ValueError) as e:
+                    print(f"❌ Błąd serializacji celu '{goal_dict.get('title', 'Nieznany')}': {e}")
+                    print(f"   Dane celu: {goal_dict}")
+                    continue
 
             return prepared_goals
 
         try:
             assert isinstance(goals_data, list), "Dane celów muszą być listą"
 
-            # Sprawdzenie blokady pliku
-            if str(self.goals_file) in self._file_locks:
-                print("⚠️ Plik celów jest zablokowany")
+            # Przygotowanie danych z kompletną serializacją
+            prepared_goals = _prepare_goals_for_save(goals_data)
+
+            if not prepared_goals:
+                print("⚠️ Brak prawidłowych celów do zapisania")
                 return False
 
-            # Dodanie blokady
-            self._file_locks.add(str(self.goals_file))
-
-            try:
-                # Kopia zapasowa przed zapisem
+            # Kopia zapasowa przed zapisem
+            if self.goals_file.exists() and self.goals_file.stat().st_size > 0:
                 if not self._backup_file_before_write(self.goals_file):
                     print("⚠️ Nie udało się utworzyć kopii zapasowej, kontynuuję...")
 
-                # Przygotowanie danych
-                prepared_goals = _prepare_goals_for_save(goals_data)
+            # Odczyt istniejących danych
+            existing_data = {}
+            if self.goals_file.exists():
+                try:
+                    with open(self.goals_file, 'r', encoding='utf-8') as f:
+                        existing_data = json.load(f)
+                except json.JSONDecodeError:
+                    print("⚠️ Uszkodzony plik celów, tworzę nowy")
+                    existing_data = {}
 
-                # Odczyt istniejących danych
-                existing_data = {}
-                if self.goals_file.exists():
-                    try:
-                        with open(self.goals_file, 'r', encoding='utf-8') as f:
-                            existing_data = json.load(f)
-                    except json.JSONDecodeError:
-                        print("⚠️ Uszkodzony plik celów, tworzę nowy")
-                        existing_data = {}
+            # Aktualizacja danych dla użytkownika
+            username = username or 'default'
+            existing_data[username] = prepared_goals
 
-                # Aktualizacja danych dla użytkownika
-                if username:
-                    existing_data[username] = prepared_goals
-                else:
-                    existing_data = {'default_user': prepared_goals}
+            # Zapis do pliku
+            with open(self.goals_file, 'w', encoding='utf-8') as f:
+                json.dump(existing_data, f, indent=2, ensure_ascii=False, default=str)
 
-                # Zapis do pliku
-                with open(self.goals_file, 'w', encoding='utf-8') as f:
-                    json.dump(existing_data, f, indent=2, ensure_ascii=False)
+            # Aktualizacja cache
+            self._data_cache['goals'] = existing_data
 
-                # Aktualizacja cache
-                self._data_cache['goals'] = existing_data
+            print(f"✅ Zapisano {len(prepared_goals)} celów do pliku")
+            return True
 
-                print(f"✅ Zapisano {len(prepared_goals)} celów do pliku")
-                return True
-
-            finally:
-                # Usunięcie blokady
-                self._file_locks.discard(str(self.goals_file))
-
-        except AssertionError as e:
-            print(f"❌ Błąd walidacji danych celów: {e}")
-            return False
         except Exception as e:
             print(f"❌ Błąd zapisu celów: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def load_goals_data(self, username: str = None) -> List[Dict[str, Any]]:
@@ -486,16 +488,17 @@ class DataManager:
                 backup_data = json.load(f)
 
             # Walidacja struktury kopii zapasowej
-            required_keys = ['goals_storage', 'user_statistics', 'backup_timestamp']
-            if not all(key in backup_data for key in required_keys):
-                print("❌ Nieprawidłowa struktura kopii zapasowej")
+            required_keys = ['goals_storage', 'backup_timestamp']
+            missing_keys = [key for key in required_keys if key not in backup_data]
+
+            if missing_keys:
+                print(f"❌ Brakujące klucze w kopii zapasowej: {missing_keys}")
                 return False
 
             # Tworzenie kopii zapasowej aktualnych danych przed przywracaniem
             current_backup_name = f"pre_restore_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
             current_data = {
                 'goals_storage': {},
-                'user_statistics': {},
                 'backup_timestamp': datetime.now().isoformat()
             }
 
@@ -504,8 +507,8 @@ class DataManager:
                 if self.goals_file.exists():
                     with open(self.goals_file, 'r', encoding='utf-8') as f:
                         current_data['goals_storage'] = json.load(f)
-            except:
-                pass
+            except Exception as e:
+                print(f"⚠️ Błąd odczytu aktualnych danych: {e}")
 
             self.save_backup(current_data, current_backup_name)
 
@@ -514,7 +517,7 @@ class DataManager:
 
             # Zapis przywróconych danych
             with open(self.goals_file, 'w', encoding='utf-8') as f:
-                json.dump(goals_storage, f, indent=2, ensure_ascii=False)
+                json.dump(goals_storage, f, indent=2, ensure_ascii=False, default=str)
 
             print(f"✅ Dane przywrócone z kopii zapasowej: {backup_filename}")
             print(f"📦 Utworzono kopię zapasową aktualnych danych: {current_backup_name}")
@@ -523,6 +526,10 @@ class DataManager:
             self._data_cache.clear()
 
             return True
+
+        except json.JSONDecodeError as e:
+            print(f"❌ Błąd parsowania kopii zapasowej: {e}")
+            return False
 
         except Exception as e:
             print(f"❌ Błąd przywracania kopii zapasowej: {e}")

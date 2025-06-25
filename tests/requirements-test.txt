@@ -1,0 +1,4 @@
+memory-profiler>=0.60.0
+psutil>=5.8.0
+flake8>=4.0.0
+pylint>=2.12.0
